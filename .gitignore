@@ -1,0 +1,7 @@
+# Common-enough stuff
+.*.swp
+__pycache__
+*.pyc
+
+# I use an IDE
+/.idea
