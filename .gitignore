@@ -5,3 +5,4 @@ __pycache__
 
 # I use an IDE
 /.idea
+/venv
