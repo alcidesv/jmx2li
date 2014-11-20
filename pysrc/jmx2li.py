@@ -31,6 +31,7 @@ from __future__ import print_function
 import sys
 import argparse
 
+import loadimpact
 
 if sys.version_info[0] < 3:
     print('I require python 3 to run', file=sys.stderr)
@@ -54,8 +55,10 @@ class TestPlan(object):
         self.rampup_time = rampup_time
         self.urls = urls
 
-    @staticmethod
-    def parse_jmx(jmx_file):
+        self.domains = set(domain for domain, rl, method in urls)
+
+    @classmethod
+    def parse_jmx(cls, jmx_file):
         """
         Parses a jmx file and get this class attributes from there
 
@@ -64,7 +67,7 @@ class TestPlan(object):
         >>> print(TestPlan.parse_jmx( open('test_data/Jmetertestplan.xml') ))
         Name: My test plan
         Thread count: 50
-        Ramp-up time: 60.0
+        Ramp-up time: 60
         Urls:
             GET test.loadimpact.com/
             GET test.loadimpact.com/news.php
@@ -78,8 +81,8 @@ class TestPlan(object):
 
         name = tree.xpath('//TestPlan')[0].get('testname')
         thread_count = int(tree.xpath('//stringProp[@name="ThreadGroup.num_threads"]')[0].text)
-        rampup_time = float(tree.xpath('//stringProp[@name="ThreadGroup.ramp_time"]')[0].text)
-        urls = list(TestPlan._obtain_urls(tree))
+        rampup_time = int(tree.xpath('//stringProp[@name="ThreadGroup.ramp_time"]')[0].text)
+        urls = list(cls._obtain_urls(tree))
 
         return TestPlan(name, thread_count, rampup_time, urls)
 
@@ -107,16 +110,82 @@ Urls:
                   )
             )
 
+    def to_lua(self):
+        """Express the case as a lua script
+
+        Example:
+
+        >>> test_plan = TestPlan.parse_jmx( open('test_data/Jmetertestplan.xml') )
+        >>> print(test_plan.to_lua())
+        http.request_batch({
+            {"GET", "test.loadimpact.com/"},{"GET", "test.loadimpact.com/news.php"},{"GET", "test.loadimpact.com/"},{"GET", "test.loadimpact.com/flip_coin.php"},{"GET", "test.loadimpact.com/flip_coin.php"}
+        })
+        """
+        return """http.request_batch({{
+    {operations}
+}})""".format(
+            operations=
+              ','.join(
+                    '{{"{method}", "{url}"}}'.format(
+                        method=method,
+                        url=domain + rl
+                    ) for (domain, rl, method) in self.urls
+                )
+        )
+
+    def install(self, client_instance):
+        assert isinstance(client_instance, loadimpact.clients.Client)
+        from loadimpact import LoadZone
+        # Let's register the user scenario...
+        user_scenario = client_instance.create_user_scenario({
+            'name': self.name,
+            'load_script': self.to_lua()
+        })
+        print('User scenario id: ', user_scenario)
+        # And let's create a test...
+        url_to_use = 'http://' + (
+            '' if len(self.domains) == 0 else (next(iter(self.domains)) + '/'))
+        config = client_instance.create_test_config({
+            'name': self.name,
+            'url': url_to_use,
+            'config': {
+                'load_schedule':
+                    [{
+                        'users': self.thread_count,
+                        'duration': self.rampup_time,
+                    }],
+                'tracks':
+                    [{
+                        'clips': [{
+                            'user_scenario_id': user_scenario.id,
+                            'percent': 100
+                        }],
+                    }],
+                'loadzone': LoadZone.AMAZON_US_ASHBURN
+            }
+        })
+        print('Configuration id: ', config.id)
+
+# Make the configuration in this variable global to the script
+args = None
+
 
 def main():
+    global args
     parser = argparse.ArgumentParser(
         description='Register jmx file in LoadImpact PaaS'
     )
     parser.add_argument('jmx', metavar='JMX', type=argparse.FileType(),
                         help='The file to read and processs')
+    parser.add_argument('--api-token', '-k', type=str,
+                        default=None,
+                        help='Api key... (uses environment var otherwise)')
 
     args = parser.parse_args()
     test_plan = TestPlan.parse_jmx(args.jmx)
+
+    li_client = loadimpact.ApiTokenClient(api_token=args.api_token)
+    test_plan.install(li_client)
 
 
 if __name__ == '__main__':

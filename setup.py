@@ -14,5 +14,5 @@ setup(
     version='0.1',
     scripts='pysrc/jmx2li.py',
 
-    install_requires=["lxml==3.4.0"]
+    install_requires=["lxml==3.4.0", "loadimpact>=1.1.0"]
 )
