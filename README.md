@@ -16,6 +16,9 @@ This script does just that. Usage instructions:
       --api-token API_TOKEN, -k API_TOKEN
                             Api key... (uses environment var otherwise)
 
+All in all, this is how you would run it:
+
+    $ jmx2li.py -k API_KEY test_data/Jmetertestplan.xml
 
 ## Pre-requisites
 
