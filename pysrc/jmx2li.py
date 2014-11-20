@@ -149,6 +149,7 @@ Urls:
             'name': self.name,
             'url': url_to_use,
             'config': {
+                'user_type': 'sbu',
                 'load_schedule':
                     [{
                         'users': self.thread_count,
@@ -156,12 +157,13 @@ Urls:
                     }],
                 'tracks':
                     [{
+                        'loadzone': LoadZone.AMAZON_US_ASHBURN,
                         'clips': [{
                             'user_scenario_id': user_scenario.id,
                             'percent': 100
                         }],
                     }],
-                'loadzone': LoadZone.AMAZON_US_ASHBURN
+
             }
         })
         print('Configuration id: ', config.id)
