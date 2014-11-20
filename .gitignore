@@ -6,3 +6,8 @@ __pycache__
 # I use an IDE
 /.idea
 /venv
+
+# Local builds
+/build
+/dist
+jmx2li.egg-info/
