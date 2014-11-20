@@ -3,7 +3,18 @@
 
 This script does just that. Usage instructions:
 
-    $ jmx2li --help
+    $ jmx2li.py --help
+    usage: jmx2li.py [-h] [--api-token API_TOKEN] JMX
+
+    Register jmx file in LoadImpact PaaS
+
+    positional arguments:
+      JMX                   The file to read and processs
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --api-token API_TOKEN, -k API_TOKEN
+                            Api key... (uses environment var otherwise)
 
 
 ## Pre-requisites
